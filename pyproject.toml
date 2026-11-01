@@ -17,6 +17,7 @@ dependencies = [
     "requests",
     "matplotlib",
     "geopandas",
+    "tqdm",
 ]
 
 [project.optional-dependencies]
