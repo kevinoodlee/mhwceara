@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,9 @@ version = "0.0.1"
 description = "Detecção e caracterização de ondas de calor marinhas no litoral do Ceará (NOAA OISST) e resposta da clorofila-a (ESA OC-CCI)."
 readme = "README.md"
 requires-python = ">=3.10"
-authors = [{ name = "Kevin Carmo" }]
+authors = [{ name = "Kevin Cordeiro Ferrer" }]
+license = "MIT"
+license-files = ["LICENSE"]
 dependencies = [
     "numpy",
     "pandas",
