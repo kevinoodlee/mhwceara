@@ -18,7 +18,7 @@ Em desenvolvimento.
 - [x] Estrutura do pacote e testes automatizados
 - [x] Módulo de detecção (`mhwceara.deteccao`), validado com séries sintéticas
 - [x] Scripts de download dos dados
-- [ ] Conferência e consolidação dos dados
+- [x] Conferência e consolidação dos dados
 - [ ] Divisão do litoral em trechos e métricas por trecho
 - [ ] Resposta da clorofila-a
 - [ ] Atlas e documentação no GitHub Pages
@@ -27,8 +27,13 @@ Em desenvolvimento.
 
 ```
 src/mhwceara/   código do pacote
+  config.py       caixa de estudo, períodos, trechos e pastas
+  dados.py        download, conferência, consolidação e leitura dos dados
+  deteccao.py     climatologia, detecção de eventos e métricas
+  trechos.py      faixa costeira e divisão do litoral em trechos
+  figuras.py      estilo dos gráficos e mapas
 tests/          testes automatizados (séries sintéticas com eventos conhecidos)
-scripts/        download e processamento dos dados
+scripts/        ordens de execução (cada script chama funções do pacote)
 data/raw/       dados brutos (não versionados)
 data/processed/ dados processados (não versionados)
 notebooks/      análise exploratória
@@ -74,6 +79,31 @@ python scripts/baixar_clorofila.py    # clorofila-a mensal, 304 arquivos (cerca 
 ```
 
 Os scripts retomam de onde pararam: arquivos já baixados e válidos são pulados.
+
+Depois do download:
+
+```
+python scripts/conferir_dados.py      # confere e junta as séries em data/processed/
+python scripts/mapa_area_estudo.py    # faixa costeira, trechos e mapa da área de estudo
+```
+
+As mesmas funções podem ser usadas para outra região, passando outra caixa:
+
+```python
+from mhwceara import dados
+from mhwceara.config import Caixa
+
+dados.baixar_oisst(caixa=Caixa(lat_sul=-10, lat_norte=-6, lon_oeste=-36, lon_leste=-32),
+                   anos=range(2000, 2021), regiao="pernambuco")
+```
+
+## Desenvolvimento
+
+```
+python -m pytest           # testes
+ruff format .              # formata o código
+ruff check --fix .         # aponta e corrige problemas (imports sem uso, ordem dos imports etc.)
+```
 
 ## Dados e citação
 

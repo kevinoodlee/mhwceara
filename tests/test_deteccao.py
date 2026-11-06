@@ -1,12 +1,13 @@
 """Testes da detecção com séries sintéticas de eventos conhecidos."""
+
 import numpy as np
 import pandas as pd
 
 from mhwceara.deteccao import climatologia, detectar_eventos, dia_do_ano_366, metricas_anuais
 
 DATAS = pd.date_range("1982-01-01", "2015-12-31", freq="D")
-RUIDO = 0.1     # ruído uniforme em [-0,1; 0,1] °C
-SALTO = 1.0     # anomalia dos eventos inseridos (°C)
+RUIDO = 0.1  # ruído uniforme em [-0,1; 0,1] °C
+SALTO = 1.0  # anomalia dos eventos inseridos (°C)
 
 
 def serie_sintetica(eventos, sazonal=False, semente=0):
@@ -40,8 +41,9 @@ def eventos_em_2013_2015(ev):
 
 
 def test_dia_do_ano_366():
-    d = pd.DatetimeIndex(["2001-02-28", "2001-03-01", "2004-02-29", "2004-03-01",
-                          "2001-12-31", "2004-12-31"])
+    d = pd.DatetimeIndex(
+        ["2001-02-28", "2001-03-01", "2004-02-29", "2004-03-01", "2001-12-31", "2004-12-31"]
+    )
     assert list(dia_do_ano_366(d)) == [59, 61, 60, 61, 366, 366]
 
 

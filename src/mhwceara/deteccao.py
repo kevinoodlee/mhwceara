@@ -14,6 +14,7 @@ Parâmetros padrão (Hobday et al., 2016):
 Entrada: série diária de TSM (pandas.Series com índice de datas), de um pixel
 ou da média de um trecho do litoral.
 """
+
 from __future__ import annotations
 
 import numpy as np
@@ -100,7 +101,7 @@ def _sequencias(mascara: np.ndarray) -> list[tuple[int, int]]:
     bordas = np.diff(m)
     inicios = np.where(bordas == 1)[0]
     fins = np.where(bordas == -1)[0] - 1
-    return list(zip(inicios, fins))
+    return list(zip(inicios, fins, strict=True))
 
 
 def detectar_eventos(
@@ -143,8 +144,15 @@ def detectar_eventos(
                 "intensidade_cumulativa": float(np.nansum(trecho)),
             }
         )
-    colunas = ["inicio", "fim", "data_pico", "duracao", "intensidade_media",
-               "intensidade_maxima", "intensidade_cumulativa"]
+    colunas = [
+        "inicio",
+        "fim",
+        "data_pico",
+        "duracao",
+        "intensidade_media",
+        "intensidade_maxima",
+        "intensidade_cumulativa",
+    ]
     eventos = pd.DataFrame(linhas, columns=colunas)
     # tipos fixos, inclusive quando não há evento (tabela vazia)
     for c in ("inicio", "fim", "data_pico"):
@@ -167,7 +175,9 @@ def metricas_anuais(eventos: pd.DataFrame, clim: pd.DataFrame) -> pd.DataFrame:
         em_evento.loc[ev["inicio"] : ev["fim"]] = True
 
     saida = pd.DataFrame(index=pd.Index(anos, name="ano"))
-    saida["dias_onda_calor"] = em_evento.groupby(em_evento.index.year).sum().reindex(anos, fill_value=0)
+    saida["dias_onda_calor"] = (
+        em_evento.groupby(em_evento.index.year).sum().reindex(anos, fill_value=0)
+    )
 
     if len(eventos):
         por_ano = eventos.assign(ano=eventos["inicio"].dt.year).groupby("ano")
