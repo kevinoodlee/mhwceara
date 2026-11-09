@@ -190,3 +190,74 @@ def metricas_anuais(eventos: pd.DataFrame, clim: pd.DataFrame) -> pd.DataFrame:
         saida["intensidade_maxima"] = np.nan
 
     return saida[["n_eventos", "dias_onda_calor", "duracao_media", "intensidade_maxima"]]
+
+
+def detectar_por_trecho(
+    series: pd.DataFrame, periodo_base: tuple[int, int] = (1982, 2011)
+) -> dict[str, dict[str, pd.DataFrame]]:
+    """Aplica climatologia, detecção e métricas anuais a cada coluna de ``series``.
+
+    series: TSM diária, uma coluna por trecho, índice de datas.
+    Devolve {trecho: {"clim": ..., "eventos": ..., "anual": ...}}.
+    """
+    resultados = {}
+    for nome in series.columns:
+        clim = climatologia(series[nome], periodo_base=periodo_base)
+        eventos = detectar_eventos(clim)
+        resultados[nome] = {
+            "clim": clim,
+            "eventos": eventos,
+            "anual": metricas_anuais(eventos, clim),
+        }
+    return resultados
+
+
+def empilhar(
+    resultados: dict[str, dict[str, pd.DataFrame]], chave: str, casas: int = 3
+) -> pd.DataFrame:
+    """Junta a tabela ``chave`` ("clim", "eventos" ou "anual") de todos os trechos numa só,
+    com a coluna ``trecho`` na frente e os números arredondados em ``casas`` decimais."""
+    partes = []
+    for nome, r in resultados.items():
+        tabela = r[chave].copy()
+        if chave != "eventos":
+            tabela = tabela.rename_axis(tabela.index.name or "data").reset_index()
+        partes.append(tabela.assign(trecho=nome))
+    junta = pd.concat(partes, ignore_index=True)
+    numericas = junta.select_dtypes("number").columns
+    junta[numericas] = junta[numericas].round(casas)
+    return junta[["trecho"] + [c for c in junta.columns if c != "trecho"]]
+
+
+def resumo(eventos: pd.DataFrame, anual: pd.DataFrame, corte: int | None = None) -> pd.Series:
+    """Resumo de um trecho: número de eventos, dias, duração, intensidades e o maior evento.
+
+    ``corte``: ano que divide a série em duas metades para comparar a média de dias em
+    onda de calor por ano (padrão: o ano do meio).
+    """
+    anos = anual.index
+    corte = corte or int(anos[len(anos) // 2])
+    pico = eventos.loc[eventos["intensidade_maxima"].idxmax()] if len(eventos) else None
+    maior = eventos.loc[eventos["intensidade_cumulativa"].idxmax()] if len(eventos) else None
+    return pd.Series(
+        {
+            "eventos": len(eventos),
+            "eventos_por_ano": round(len(eventos) / len(anos), 2),
+            "dias_total": int(anual["dias_onda_calor"].sum()),
+            "duracao_media_dias": round(float(eventos["duracao"].mean()), 1),
+            "duracao_maxima_dias": int(eventos["duracao"].max()) if len(eventos) else 0,
+            "intensidade_maxima_C": round(float(pico["intensidade_maxima"]), 2),
+            "data_intensidade_maxima": pico["data_pico"].date() if pico is not None else None,
+            "maior_evento_inicio": maior["inicio"].date() if maior is not None else None,
+            "maior_evento_duracao_dias": int(maior["duracao"]) if maior is not None else 0,
+            "maior_evento_intensidade_cumulativa_C_dia": (
+                round(float(maior["intensidade_cumulativa"]), 1) if maior is not None else 0.0
+            ),
+            f"dias_por_ano_{anos[0]}_{corte - 1}": round(
+                float(anual.loc[: corte - 1, "dias_onda_calor"].mean()), 1
+            ),
+            f"dias_por_ano_{corte}_{anos[-1]}": round(
+                float(anual.loc[corte:, "dias_onda_calor"].mean()), 1
+            ),
+        }
+    )

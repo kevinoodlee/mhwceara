@@ -3,7 +3,15 @@
 import numpy as np
 import pandas as pd
 
-from mhwceara.deteccao import climatologia, detectar_eventos, dia_do_ano_366, metricas_anuais
+from mhwceara.deteccao import (
+    climatologia,
+    detectar_eventos,
+    detectar_por_trecho,
+    dia_do_ano_366,
+    empilhar,
+    metricas_anuais,
+    resumo,
+)
 
 DATAS = pd.date_range("1982-01-01", "2015-12-31", freq="D")
 RUIDO = 0.1  # ruído uniforme em [-0,1; 0,1] °C
@@ -115,3 +123,23 @@ def test_metricas_anuais():
     assert anual.loc[2013, "dias_onda_calor"] == 10
     assert anual.loc[2014, "n_eventos"] == 0
     assert anual.loc[2014, "dias_onda_calor"] == 0
+
+
+def test_detectar_por_trecho_e_empilhar():
+    temp = serie_sintetica([("2013-06-10", 10)])
+    series = pd.DataFrame({"oeste": temp, "leste": temp})
+    resultados = detectar_por_trecho(series, periodo_base=(1982, 2011))
+    assert list(resultados) == ["oeste", "leste"]
+    eventos = empilhar(resultados, "eventos")
+    assert list(eventos.columns[:2]) == ["trecho", "inicio"]
+    assert (eventos["trecho"] == "oeste").sum() == (eventos["trecho"] == "leste").sum()
+    clim = empilhar(resultados, "clim")
+    assert list(clim.columns[:2]) == ["trecho", "data"]
+
+
+def test_resumo():
+    clim, ev = detectar(serie_sintetica([("2013-06-10", 10)]))
+    r = resumo(eventos_em_2013_2015(ev), metricas_anuais(ev, clim), corte=2000)
+    assert r["eventos"] == 1
+    assert r["maior_evento_duracao_dias"] == 10
+    assert str(r["maior_evento_inicio"]) == "2013-06-10"

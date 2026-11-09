@@ -92,5 +92,9 @@ class Pastas:
     def figuras(self) -> Path:
         return self.raiz / "outputs" / "figuras"
 
+    @property
+    def tabelas(self) -> Path:
+        return self.raiz / "outputs" / "tabelas"
+
 
 PASTAS = Pastas(raiz_projeto())

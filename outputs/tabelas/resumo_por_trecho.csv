@@ -1,0 +1,13 @@
+,oeste,central,leste
+eventos,98,100,93
+eventos_por_ano,2.23,2.27,2.11
+dias_total,1747,1791,1777
+duracao_media_dias,17.8,17.9,19.1
+duracao_maxima_dias,198,199,204
+intensidade_maxima_C,1.88,1.83,1.81
+data_intensidade_maxima,2024-04-11,2024-04-06,2024-04-05
+maior_evento_inicio,2023-12-27,2023-12-27,2023-12-28
+maior_evento_duracao_dias,198,199,204
+maior_evento_intensidade_cumulativa_C_dia,219.5,230.4,233.2
+dias_por_ano_1982_2003,5.3,7.3,10.5
+dias_por_ano_2004_2025,74.1,74.1,70.3
