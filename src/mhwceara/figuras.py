@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from matplotlib.colors import ListedColormap  # noqa: E402
+from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
 
 from .config import PASTAS, TRECHOS  # noqa: E402
@@ -296,4 +297,85 @@ def comparar_variantes(
     fig.suptitle(titulo, fontsize=12, x=0.01, ha="left")
     nota_fonte(fig, fonte)
     fig.tight_layout(rect=(0, 0.03, 1, 1))
+    return salvar(fig, nome)
+
+
+def resposta_clorofila(
+    tabela: pd.DataFrame,
+    titulo: str,
+    fonte: str,
+    nome: str = "resposta_clorofila.png",
+) -> Path:
+    """Anomalia de log10 da clorofila-a em meses com e sem onda de calor, por defasagem.
+
+    tabela: uma linha por trecho e defasagem, com as colunas de ``clorofila.comparar``
+    (mediana e quartis de cada grupo) e a coluna ``trecho``. Ponto = mediana; barra =
+    intervalo entre os quartis (25% a 75%).
+    """
+    nomes = [t for t in TRECHOS if t in set(tabela["trecho"])]
+    fig, eixos = plt.subplots(1, len(nomes), figsize=(10, 4.2), sharey=True)
+    eixos = np.atleast_1d(eixos)
+    deslocamento = 0.12
+    for ax, trecho in zip(eixos, nomes, strict=True):
+        t = tabela[tabela["trecho"] == trecho]
+        x = t["defasagem_meses"].to_numpy()
+        cor = CORES_TRECHOS.get(trecho, "gray")
+        for grupo, dx, estilo in (
+            ("com", -deslocamento, {"color": cor, "marker": "o"}),
+            ("sem", deslocamento, {"color": "#7a7a7a", "marker": "s"}),
+        ):
+            mediana = t[f"mediana_{grupo}"].to_numpy()
+            erro = [mediana - t[f"q25_{grupo}"].to_numpy(), t[f"q75_{grupo}"].to_numpy() - mediana]
+            ax.errorbar(
+                x + dx,
+                mediana,
+                yerr=erro,
+                linestyle="none",
+                markersize=7,
+                capsize=0,
+                elinewidth=2,
+                **estilo,
+            )
+        for xi, p in zip(x, t["p_valor"], strict=True):
+            ax.annotate(
+                f"p = {p:.3f}".replace(".", ","),
+                (xi, 1.0),
+                xycoords=("data", "axes fraction"),
+                ha="center",
+                va="top",
+                fontsize=8,
+                color=COR_TEXTO,
+            )
+        ax.axhline(0, color="#9a9a9a", linewidth=0.8)
+        ax.set_xticks(x, [f"{k}" for k in x])
+        ax.set_xlim(x.min() - 0.5, x.max() + 0.5)
+        ax.set_xlabel("Defasagem (meses)", color=COR_TEXTO)
+        ax.set_title(f"Trecho {trecho}", loc="left", fontsize=10, color=COR_TEXTO)
+        virgula_decimal(ax.yaxis, casas=2)
+        _estilo_painel(ax)
+    eixos[0].set_ylabel("Anomalia de log10 da clorofila-a", color=COR_TEXTO)
+    legenda = [
+        Line2D(
+            [],
+            [],
+            color="#3d3d3d",
+            marker="o",
+            linestyle="none",
+            label="meses com onda de calor (cor do trecho)",
+        ),
+        Line2D(
+            [], [], color="#7a7a7a", marker="s", linestyle="none", label="meses sem onda de calor"
+        ),
+    ]
+    fig.legend(
+        handles=legenda,
+        loc="upper left",
+        ncol=2,
+        fontsize=8,
+        frameon=False,
+        bbox_to_anchor=(0.01, 0.93),
+    )
+    fig.suptitle(titulo, fontsize=12, x=0.01, ha="left")
+    nota_fonte(fig, fonte)
+    fig.tight_layout(rect=(0, 0.04, 1, 0.9))
     return salvar(fig, nome)

@@ -57,6 +57,11 @@ FAIXA_COSTEIRA = 1.0  # distância máxima da costa, em graus (cerca de 110 km)
 FRACAO_MINIMA = 0.5  # cobertura espacial mínima por trecho e mês (clorofila-a)
 FRACOES_SENSIBILIDADE = (0.3, 0.5, 0.7)
 
+# Resposta da clorofila-a (decidido em 10/11/2026)
+DIAS_MINIMOS_EVENTO = 15  # mês com onda de calor: 15 dias ou mais em evento no trecho
+DISTANCIA_MINIMA_COSTA = 0.09  # graus (cerca de 10 km): pixels mais próximos são excluídos
+DEFASAGENS = (0, 1, 2)  # meses entre o evento e a resposta da clorofila-a
+
 
 def raiz_projeto(inicio: Path | None = None) -> Path:
     """Pasta do projeto: a primeira, a partir de ``inicio`` (padrão: pasta atual) e subindo,

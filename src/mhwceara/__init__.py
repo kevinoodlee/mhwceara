@@ -5,6 +5,7 @@ Módulos:
   - dados: download, conferência, consolidação e leitura do OISST e do OC-CCI;
   - deteccao: climatologia, detecção de eventos e métricas (Hobday et al., 2016);
   - trechos: faixa costeira, divisão do litoral e séries médias por trecho;
+  - clorofila: série de clorofila-a por trecho, anomalia e resposta às ondas de calor;
   - figuras: estilo dos gráficos e mapas.
 """
 
