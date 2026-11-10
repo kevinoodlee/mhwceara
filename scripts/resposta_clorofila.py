@@ -4,8 +4,9 @@ Para cada trecho: média mensal de log10 da clorofila-a (OC-CCI, 4 km, pixels a 
 cerca de 10 km da costa, meses com cobertura de pelo menos 50%), anomalia em relação à
 climatologia mensal e comparação entre meses com onda de calor (15 dias ou mais em evento)
 e sem, com defasagem de 0 a 2 meses (teste de permutação da diferença de medianas).
-Cenário principal: eventos da linha de base 1982 a 2011. Sensibilidades: eventos da série
-sem tendência, cobertura mínima de 30% e de 70% e todos os pixels da faixa costeira.
+Cenário principal: eventos da linha de base 1982 a 2011, anomalia de log10. Sensibilidades:
+escala linear (anomalia relativa, em %), eventos da série sem tendência, cobertura mínima de
+30% e de 70% e todos os pixels da faixa costeira.
 Gera:
   - data/processed/clorofila_por_trecho.csv: log10, cobertura e anomalia por mês e trecho;
   - outputs/tabelas/resposta_clorofila.csv: comparação por cenário, trecho e defasagem;
@@ -55,17 +56,21 @@ eventos = {
     ),
 }
 
-# cenários = combinação de uma série de clorofila com um conjunto de eventos
-cenarios = {nome: (nome, PRINCIPAL) for nome in series_chl}
-cenarios["eventos da série sem tendência"] = (PRINCIPAL, "eventos da série sem tendência")
+# cenários = (série de clorofila, conjunto de eventos, escala da anomalia)
+cenarios = {nome: (nome, PRINCIPAL, "log10") for nome in series_chl}
+cenarios["escala linear"] = (PRINCIPAL, PRINCIPAL, "relativa")
+cenarios["eventos da série sem tendência"] = (PRINCIPAL, "eventos da série sem tendência", "log10")
+coluna_anomalia = {"log10": "anomalia_log10", "relativa": "anomalia_relativa"}
 
 partes = []
-for cenario, (nome_serie, nome_eventos) in tqdm(cenarios.items(), desc="cenários", unit="cenário"):
+for cenario, (nome_serie, nome_eventos, escala) in tqdm(
+    cenarios.items(), desc="cenários", unit="cenário"
+):
     serie = series_chl[nome_serie]
     for trecho, r in eventos[nome_eventos].items():
-        anom = serie[serie["trecho"] == trecho].set_index("data")["anomalia_log10"]
+        anom = serie[serie["trecho"] == trecho].set_index("data")[coluna_anomalia[escala]]
         dias = clorofila.dias_em_evento_por_mes(r["clim"], r["eventos"])
-        resultado = clorofila.comparar(anom, dias)
+        resultado = clorofila.comparar(anom, dias, escala=escala)
         partes.append(resultado.assign(cenario=cenario, trecho=trecho))
 tabela = pd.concat(partes, ignore_index=True)
 tabela = tabela[
@@ -74,9 +79,9 @@ tabela = tabela[
 
 for pasta in (PASTAS.processado, PASTAS.tabelas):
     pasta.mkdir(parents=True, exist_ok=True)
-series_chl[PRINCIPAL].round({"log10_chl": 4, "anomalia_log10": 4}).to_csv(
-    PASTAS.processado / "clorofila_por_trecho.csv", index=False
-)
+series_chl[PRINCIPAL].round(
+    {"log10_chl": 4, "chl_media": 4, "anomalia_log10": 4, "anomalia_relativa": 2}
+).to_csv(PASTAS.processado / "clorofila_por_trecho.csv", index=False)
 tabela.to_csv(PASTAS.tabelas / "resposta_clorofila.csv", index=False)
 
 principal = tabela[tabela["cenario"] == PRINCIPAL]
@@ -108,8 +113,9 @@ for valor in ("variacao_percentual", "p_valor"):
     quadro = d0.pivot(index="cenario", columns="trecho", values=valor)
     print(quadro.loc[list(cenarios), ordem_trechos].to_string(), "\n")
 print(
-    "\n(variacao_percentual: diferença entre as medianas, em % da concentração de clorofila-a;"
-    " negativa = menos clorofila nos meses com onda de calor)"
+    "\n(variacao_percentual: diferença entre as medianas, em % da concentração de clorofila-a"
+    " (na escala linear, em pontos percentuais da anomalia relativa); negativa = menos"
+    " clorofila nos meses com onda de calor)"
 )
 
 fonte = (

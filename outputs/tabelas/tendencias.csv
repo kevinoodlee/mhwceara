@@ -1,0 +1,22 @@
+variante,trecho,indicador,n,tau,inclinacao_sen_por_decada,p_valor,p_valor_sem_correcao,fator_correcao
+TSM observada,oeste,TSM média anual (°C),44,0.67,0.216,0.0,0.0,1.0
+TSM observada,central,TSM média anual (°C),44,0.681,0.214,0.0,0.0,1.0
+TSM observada,leste,TSM média anual (°C),44,0.651,0.195,0.0,0.0,1.0
+base 1982 a 2011 (principal),oeste,dias em onda de calor por ano,44,0.588,17.5,0.0,0.0,1.0
+base 1982 a 2011 (principal),oeste,eventos por ano,44,0.522,1.206,0.0,0.0,1.0
+base 1982 a 2011 (principal),central,dias em onda de calor por ano,44,0.54,16.847,0.00032,0.0,2.15
+base 1982 a 2011 (principal),central,eventos por ano,44,0.505,1.111,0.0,0.0,1.0
+base 1982 a 2011 (principal),leste,dias em onda de calor por ano,44,0.507,13.333,0.00029,0.0,1.86
+base 1982 a 2011 (principal),leste,eventos por ano,44,0.446,0.833,1e-05,1e-05,1.0
+base 1982 a 2020,oeste,dias em onda de calor por ano,44,0.533,10.0,0.0,0.0,1.0
+base 1982 a 2020,oeste,eventos por ano,44,0.47,0.769,0.0,0.0,1.0
+base 1982 a 2020,central,dias em onda de calor por ano,44,0.481,7.5,0.0009,0.0,2.09
+base 1982 a 2020,central,eventos por ano,44,0.46,0.833,0.0,0.0,1.0
+base 1982 a 2020,leste,dias em onda de calor por ano,44,0.456,8.636,0.00053,1e-05,1.68
+base 1982 a 2020,leste,eventos por ano,44,0.391,0.625,0.0001,0.0001,1.0
+sem tendência linear,oeste,dias em onda de calor por ano,44,-0.129,0.0,0.20623,0.20623,1.0
+sem tendência linear,oeste,eventos por ano,44,-0.191,0.0,0.0559,0.0559,1.0
+sem tendência linear,central,dias em onda de calor por ano,44,-0.149,0.0,0.12862,0.12862,1.0
+sem tendência linear,central,eventos por ano,44,-0.197,0.0,0.04333,0.04333,1.0
+sem tendência linear,leste,dias em onda de calor por ano,44,-0.146,0.0,0.18987,0.13722,1.29
+sem tendência linear,leste,eventos por ano,44,-0.181,0.0,0.06315,0.06315,1.0

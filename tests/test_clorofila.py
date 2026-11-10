@@ -78,3 +78,16 @@ def test_teste_permutacao_sem_efeito():
     rng = np.random.default_rng(2)
     p = clorofila.teste_permutacao(rng.normal(0, 1, 60), rng.normal(0, 1, 200), 2000)
     assert p > 0.05
+
+
+def test_anomalia_relativa_e_escala_linear():
+    serie = pd.DataFrame(
+        {"data": MESES, "trecho": "oeste", "log10_chl": np.log10(0.2), "chl_media": 0.2}
+    )
+    serie.loc[serie["data"].dt.year == 2005, "chl_media"] = 0.18  # 10% abaixo
+    anom = clorofila.anomalia(serie).set_index("data")["anomalia_relativa"]
+    assert abs(anom.loc["2005-01-01"] - (0.18 / ((9 * 0.2 + 0.18) / 10) - 1) * 100) < 1e-9
+    dias = pd.Series(np.where(anom.index.year == 2005, 20, 0), index=anom.index)
+    tabela = clorofila.comparar(anom, dias, n_permutacoes=500, escala="relativa")
+    linha = tabela.set_index("defasagem_meses").loc[0]
+    assert np.isnan(linha["diferenca_log10"]) and linha["variacao_percentual"] < -9

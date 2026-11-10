@@ -57,9 +57,9 @@ def serie_por_trecho(
     """Média mensal de log10 da clorofila-a em cada trecho.
 
     Usa os pixels da faixa costeira a pelo menos ``distancia_minima`` graus da costa.
-    Devolve uma tabela longa (data, trecho, log10_chl, pixels_validos, pixels_total,
-    cobertura, valido); ``log10_chl`` fica vazio nos meses com cobertura abaixo de
-    ``fracao_minima``.
+    Devolve uma tabela longa (data, trecho, log10_chl, chl_media em mg m-3, pixels_validos,
+    pixels_total, cobertura, valido); ``log10_chl`` e ``chl_media`` ficam vazios nos meses
+    com cobertura abaixo de ``fracao_minima``.
     """
     usar = pixels[pixels["na_faixa"] & (pixels["distancia_costa_graus"] >= distancia_minima)]
     i_lat = {v: k for k, v in enumerate(chl["lat"].values)}
@@ -76,6 +76,10 @@ def serie_por_trecho(
         n_validos = np.sum(~np.isnan(log10), axis=1)
         soma = np.nansum(log10, axis=1)
         media = np.where(n_validos > 0, soma / np.maximum(n_validos, 1), np.nan)
+        linear = valores[:, ii, jj]
+        media_linear = np.where(
+            n_validos > 0, np.nansum(linear, axis=1) / np.maximum(n_validos, 1), np.nan
+        )
         cobertura = n_validos / len(grupo)
         partes.append(
             pd.DataFrame(
@@ -83,6 +87,7 @@ def serie_por_trecho(
                     "data": datas,
                     "trecho": trecho,
                     "log10_chl": np.where(cobertura >= fracao_minima, media, np.nan),
+                    "chl_media": np.where(cobertura >= fracao_minima, media_linear, np.nan),
                     "pixels_validos": n_validos,
                     "pixels_total": len(grupo),
                     "cobertura": np.round(cobertura, 4),
@@ -94,12 +99,20 @@ def serie_por_trecho(
 
 
 def anomalia(serie: pd.DataFrame) -> pd.DataFrame:
-    """Acrescenta a anomalia de log10 da clorofila-a em relação à média de cada mês do
-    calendário (climatologia mensal) de cada trecho, calculada com os meses válidos."""
+    """Acrescenta as anomalias da clorofila-a em relação à média de cada mês do calendário
+    (climatologia mensal) de cada trecho, calculada com os meses válidos:
+
+    - ``anomalia_log10``: log10 do mês menos a climatologia de log10 (escala principal);
+    - ``anomalia_relativa``: em escala linear, em % da climatologia (sensibilidade), quando
+      a série tem a coluna ``chl_media``.
+    """
     serie = serie.copy()
     mes = serie["data"].dt.month
     climatologia = serie.groupby(["trecho", mes])["log10_chl"].transform("mean")
     serie["anomalia_log10"] = serie["log10_chl"] - climatologia
+    if "chl_media" in serie:
+        clim_linear = serie.groupby(["trecho", mes])["chl_media"].transform("mean")
+        serie["anomalia_relativa"] = (serie["chl_media"] / clim_linear - 1) * 100
     return serie
 
 
@@ -141,8 +154,12 @@ def comparar(
     dias_minimos: int = DIAS_MINIMOS_EVENTO,
     defasagens: tuple[int, ...] = DEFASAGENS,
     n_permutacoes: int = 10000,
+    escala: str = "log10",
 ) -> pd.DataFrame:
     """Compara a anomalia de clorofila-a entre meses com e sem onda de calor.
+
+    escala: "log10" (anomalia de log10; a diferença é convertida em % da concentração) ou
+    "relativa" (anomalia já em %; a diferença é dada em pontos percentuais).
 
     Para a defasagem k, a anomalia do mês t+k é associada à condição (com ou sem evento)
     do mês t. Devolve uma linha por defasagem com o tamanho dos grupos, medianas e
@@ -172,8 +189,10 @@ def comparar(
                 "mediana_sem": round(float(np.median(sem)), 4),
                 "q25_sem": round(float(np.percentile(sem, 25)), 4),
                 "q75_sem": round(float(np.percentile(sem, 75)), 4),
-                "diferenca_log10": round(diferenca, 4),
-                "variacao_percentual": round((10**diferenca - 1) * 100, 1),
+                "diferenca_log10": round(diferenca, 4) if escala == "log10" else np.nan,
+                "variacao_percentual": round(
+                    (10**diferenca - 1) * 100 if escala == "log10" else diferenca, 1
+                ),
                 "p_valor": round(teste_permutacao(com, sem, n_permutacoes), 4),
                 "r_fracao_dias": round(float(np.corrcoef(fracao, par["anomalia"])[0, 1]), 3),
             }

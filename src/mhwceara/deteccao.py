@@ -292,3 +292,63 @@ def resumo(eventos: pd.DataFrame, anual: pd.DataFrame, corte: int | None = None)
             ),
         }
     )
+
+
+def inclinacao_sen(y: np.ndarray, x: np.ndarray | None = None) -> float:
+    """Inclinação de Sen: mediana das inclinações entre todos os pares de pontos
+    (estimativa robusta da taxa de variação, pouco sensível a valores extremos)."""
+    y = np.asarray(y, dtype=float)
+    x = np.arange(y.size, dtype=float) if x is None else np.asarray(x, dtype=float)
+    i, j = np.triu_indices(y.size, k=1)
+    return float(np.median((y[j] - y[i]) / (x[j] - x[i])))
+
+
+def tendencia(serie: pd.Series) -> dict:
+    """Teste de Mann-Kendall com correção para autocorrelação (HAMED; RAO, 1998) e
+    inclinação de Sen, para uma série anual (índice = ano).
+
+    A autocorrelação positiva infla a significância do teste original; a correção aumenta a
+    variância da estatística S usando as autocorrelações significativas dos postos da série
+    sem tendência; o fator nunca é menor que 1, para que a correção só torne o teste mais
+    conservador. Devolve n, tau de Kendall, inclinação de Sen por década, valor-p com e sem
+    correção e o fator de correção da variância.
+    """
+    from math import erfc, sqrt
+
+    serie = serie.dropna()
+    y = serie.to_numpy(dtype=float)
+    x = serie.index.to_numpy(dtype=float)
+    n = y.size
+    i, j = np.triu_indices(n, k=1)
+    s = float(np.sum(np.sign(y[j] - y[i])))
+    _, contagens = np.unique(y, return_counts=True)  # empates
+    var_s = (
+        n * (n - 1) * (2 * n + 5) - np.sum(contagens * (contagens - 1) * (2 * contagens + 5))
+    ) / 18
+
+    # correção de Hamed e Rao: autocorrelação dos postos da série sem a tendência de Sen
+    inclinacao = inclinacao_sen(y, x)
+    residuo = y - inclinacao * x
+    postos = pd.Series(residuo).rank().to_numpy()
+    postos = postos - postos.mean()
+    limite = 1.96 / sqrt(n)  # autocorrelação significativa a 5%
+    soma = 0.0
+    for k in range(1, n - 2):
+        rho = float(np.sum(postos[:-k] * postos[k:]) / np.sum(postos**2))
+        if abs(rho) > limite:
+            soma += (n - k) * (n - k - 1) * (n - k - 2) * rho
+    # a correção só pode tornar o teste mais conservador (fator mínimo 1)
+    fator = max(1 + 2 / (n * (n - 1) * (n - 2)) * soma, 1.0)
+
+    def p_valor(variancia: float) -> float:
+        z = (s - np.sign(s)) / sqrt(variancia) if s != 0 else 0.0
+        return float(erfc(abs(z) / sqrt(2)))
+
+    return {
+        "n": n,
+        "tau": round(s / (n * (n - 1) / 2), 3),
+        "inclinacao_sen_por_decada": round(inclinacao * 10, 3),
+        "p_valor": round(p_valor(var_s * fator), 5),
+        "p_valor_sem_correcao": round(p_valor(var_s), 5),
+        "fator_correcao": round(fator, 2),
+    }

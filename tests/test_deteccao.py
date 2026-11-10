@@ -9,9 +9,11 @@ from mhwceara.deteccao import (
     detectar_por_trecho,
     dia_do_ano_366,
     empilhar,
+    inclinacao_sen,
     metricas_anuais,
     remover_tendencia,
     resumo,
+    tendencia,
 )
 
 DATAS = pd.date_range("1982-01-01", "2015-12-31", freq="D")
@@ -163,3 +165,28 @@ def test_detectar_por_trecho_sem_tendencia():
     resultados = detectar_por_trecho(pd.DataFrame({"oeste": temp}), sem_tendencia=True)
     assert "tendencia_por_decada" in resultados["oeste"]
     assert len(eventos_em_2013_2015(resultados["oeste"]["eventos"])) == 1
+
+
+def test_inclinacao_sen_resiste_a_valor_extremo():
+    y = 2.0 * np.arange(20)
+    y[5] = 500.0
+    assert inclinacao_sen(y) == 2.0
+
+
+def test_tendencia_detecta_aumento_e_nao_acusa_ruido():
+    gerador = np.random.default_rng(0)
+    anos = np.arange(1982, 2026)
+    com = tendencia(pd.Series(3.0 * (anos - 1982) + gerador.normal(0, 5, anos.size), index=anos))
+    assert com["p_valor"] < 0.001 and abs(com["inclinacao_sen_por_decada"] - 30) < 5
+    sem = tendencia(pd.Series(gerador.normal(0, 5, anos.size), index=anos))
+    assert sem["p_valor"] > 0.05
+
+
+def test_tendencia_correcao_so_torna_mais_conservador():
+    gerador = np.random.default_rng(1)
+    anos = np.arange(1982, 2026)
+    ar1 = np.zeros(anos.size)
+    for k in range(1, anos.size):
+        ar1[k] = 0.8 * ar1[k - 1] + gerador.normal()
+    r = tendencia(pd.Series(ar1, index=anos))
+    assert r["fator_correcao"] >= 1 and r["p_valor"] >= r["p_valor_sem_correcao"]
