@@ -30,7 +30,7 @@ def dia_do_ano_366(datas: pd.DatetimeIndex) -> np.ndarray:
     Assim o mesmo dia do calendário recebe o mesmo número em todos os anos.
     """
     datas = pd.DatetimeIndex(datas)
-    doy = datas.dayofyear.to_numpy().copy()
+    doy = datas.day_of_year.to_numpy().copy()
     ajuste = (~datas.is_leap_year) & (datas.month > 2)
     doy[ajuste] += 1
     return doy
@@ -192,22 +192,53 @@ def metricas_anuais(eventos: pd.DataFrame, clim: pd.DataFrame) -> pd.DataFrame:
     return saida[["n_eventos", "dias_onda_calor", "duracao_media", "intensidade_maxima"]]
 
 
+def remover_tendencia(temp: pd.Series) -> tuple[pd.Series, float]:
+    """Remove a tendência linear de uma série diária, mantendo a média e o ciclo sazonal.
+
+    A inclinação é estimada por mínimos quadrados sobre a anomalia em relação à média de
+    cada dia do ano (sem o ciclo sazonal, que enviesaria a reta). A série devolvida é a
+    original menos essa reta, centrada no meio do período, de modo que o nível médio e o
+    ciclo sazonal permanecem. Devolve a série sem tendência e a tendência removida, em
+    unidades por década.
+    """
+    temp = temp.astype(float)
+    dias = (temp.index - temp.index[0]).days.to_numpy(dtype=float)
+    doy = dia_do_ano_366(temp.index)
+    anomalia = temp - temp.groupby(doy).transform("mean")
+    validos = ~np.isnan(anomalia.to_numpy())
+    inclinacao = np.polyfit(dias[validos], anomalia.to_numpy()[validos], 1)[0]  # por dia
+    centro = dias[validos].mean()
+    sem_tendencia = temp - inclinacao * (dias - centro)
+    return sem_tendencia, float(inclinacao * 3652.5)
+
+
 def detectar_por_trecho(
-    series: pd.DataFrame, periodo_base: tuple[int, int] = (1982, 2011)
+    series: pd.DataFrame,
+    periodo_base: tuple[int, int] = (1982, 2011),
+    sem_tendencia: bool = False,
 ) -> dict[str, dict[str, pd.DataFrame]]:
     """Aplica climatologia, detecção e métricas anuais a cada coluna de ``series``.
 
     series: TSM diária, uma coluna por trecho, índice de datas.
-    Devolve {trecho: {"clim": ..., "eventos": ..., "anual": ...}}.
+    sem_tendencia: se verdadeiro, remove a tendência linear de cada série antes (variante de
+    sensibilidade que separa os extremos do aquecimento de longo prazo).
+    Devolve {trecho: {"clim": ..., "eventos": ..., "anual": ...}} e, com ``sem_tendencia``,
+    também "tendencia_por_decada" (°C por década).
     """
     resultados = {}
     for nome in series.columns:
-        clim = climatologia(series[nome], periodo_base=periodo_base)
+        serie = series[nome]
+        extra = {}
+        if sem_tendencia:
+            serie, tendencia = remover_tendencia(serie)
+            extra["tendencia_por_decada"] = tendencia
+        clim = climatologia(serie, periodo_base=periodo_base)
         eventos = detectar_eventos(clim)
         resultados[nome] = {
             "clim": clim,
             "eventos": eventos,
             "anual": metricas_anuais(eventos, clim),
+            **extra,
         }
     return resultados
 

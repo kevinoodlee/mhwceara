@@ -44,7 +44,9 @@ CAIXA_CEARA = Caixa(lat_sul=-8.0, lat_norte=0.0, lon_oeste=-44.0, lon_leste=-34.
 ANOS_OISST = range(1982, 2026)  # 1982 a 2025, só anos completos
 INICIO_CLOROFILA = (1997, 9)  # primeiro mês do OC-CCI
 FIM_CLOROFILA = (2022, 12)  # último mês da versão 6.0
-PERIODO_BASE = (1982, 2011)  # climatologia principal (sensibilidade: 1982 a 2020 e base móvel)
+PERIODO_BASE = (1982, 2011)  # climatologia principal
+PERIODO_BASE_SENSIBILIDADE = (1982, 2020)  # sensibilidade 1: período-base mais recente
+# sensibilidade 2: série sem tendência linear, com o período-base principal (decidido em 10/11/2026)
 
 TRECHOS = ("oeste", "central", "leste")
 # Limites entre trechos (longitude, de oeste para leste), decididos em 06/11/2026:

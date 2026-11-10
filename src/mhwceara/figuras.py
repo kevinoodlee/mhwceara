@@ -253,3 +253,47 @@ def serie_com_eventos(
     nota_fonte(fig, fonte)
     fig.tight_layout(rect=(0, 0.03, 1, 1))
     return salvar(fig, nome or f"tsm_eventos_{ano}.png")
+
+
+# variantes de sensibilidade: cores fora da paleta dos trechos + estilo de linha (codificação dupla)
+ESTILOS_VARIANTES = (
+    {"color": "#2a78d6", "linestyle": "-", "linewidth": 1.8},
+    {"color": "#eda100", "linestyle": "--", "linewidth": 1.6},
+    {"color": "#e87ba4", "linestyle": ":", "linewidth": 2.0},
+)
+
+
+def comparar_variantes(
+    dias: dict[str, pd.DataFrame],
+    titulo: str,
+    fonte: str,
+    nome: str = "sensibilidade_linha_de_base.png",
+) -> Path:
+    """Dias em onda de calor por ano em cada variante de detecção, um painel por trecho.
+
+    dias: {variante: tabela (índice = ano, uma coluna por trecho)}.
+    """
+    variantes = list(dias)
+    trechos_ = list(next(iter(dias.values())).columns)
+    fig, eixos = plt.subplots(
+        len(trechos_), 1, figsize=(10, 2.3 * len(trechos_) + 1.2), sharex=True, sharey=True
+    )
+    eixos = np.atleast_1d(eixos)
+    for ax, trecho in zip(eixos, trechos_, strict=True):
+        for variante, estilo in zip(variantes, ESTILOS_VARIANTES, strict=False):
+            serie = dias[variante][trecho]
+            ax.plot(serie.index, serie.values, label=variante, **estilo)
+        ax.set_title(f"Trecho {trecho}", loc="left", fontsize=10, color=COR_TEXTO)
+        _estilo_painel(ax)
+    anos = next(iter(dias.values())).index
+    eixos[-1].set_xlim(anos.min() - 0.6, anos.max() + 0.6)
+    eixos[-1].set_xticks(range(int(np.ceil(anos.min() / 5) * 5), int(anos.max()) + 1, 5))
+    eixos[-1].set_xlabel("Ano", color=COR_TEXTO)
+    fig.supylabel("Dias em onda de calor marinha", color=COR_TEXTO, fontsize=10)
+    eixos[0].legend(
+        loc="upper left", ncol=len(variantes), fontsize=8, frameon=False, bbox_to_anchor=(0, 1.32)
+    )
+    fig.suptitle(titulo, fontsize=12, x=0.01, ha="left")
+    nota_fonte(fig, fonte)
+    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    return salvar(fig, nome)

@@ -10,6 +10,7 @@ from mhwceara.deteccao import (
     dia_do_ano_366,
     empilhar,
     metricas_anuais,
+    remover_tendencia,
     resumo,
 )
 
@@ -28,7 +29,7 @@ def serie_sintetica(eventos, sazonal=False, semente=0):
     rng = np.random.default_rng(semente)
     base = np.full(len(DATAS), 26.0)
     if sazonal:
-        base = base + 1.5 * np.sin(2 * np.pi * DATAS.dayofyear.to_numpy() / 365.25)
+        base = base + 1.5 * np.sin(2 * np.pi * DATAS.day_of_year.to_numpy() / 365.25)
     ruido = rng.uniform(-RUIDO, RUIDO, len(DATAS))
     temp = pd.Series(base + ruido, index=DATAS)
     for inicio, n in eventos:
@@ -57,7 +58,7 @@ def test_dia_do_ano_366():
 
 def test_climatologia_recupera_ciclo_sazonal():
     clim, _ = detectar(serie_sintetica([], sazonal=True))
-    base = 26.0 + 1.5 * np.sin(2 * np.pi * clim.index.dayofyear / 365.25)
+    base = 26.0 + 1.5 * np.sin(2 * np.pi * clim.index.day_of_year / 365.25)
     assert np.nanmax(np.abs(clim["clim"] - base)) < 0.05
 
 
@@ -143,3 +144,22 @@ def test_resumo():
     assert r["eventos"] == 1
     assert r["maior_evento_duracao_dias"] == 10
     assert str(r["maior_evento_inicio"]) == "2013-06-10"
+
+
+def test_remover_tendencia():
+    datas = pd.date_range("1982-01-01", "2025-12-31", freq="D")
+    anos = (datas - datas[0]).days / 365.25
+    sazonal = 1.5 * np.sin(2 * np.pi * datas.day_of_year / 365.25)
+    temp = pd.Series(26.0 + sazonal + 0.02 * anos, index=datas)  # 0,2 °C por década
+    sem, tendencia = remover_tendencia(temp)
+    assert abs(tendencia - 0.2) < 0.01
+    assert abs(sem.mean() - temp.mean()) < 1e-9  # a média é preservada
+    _, resto = remover_tendencia(sem)
+    assert abs(resto) < 1e-3  # a série resultante não tem tendência (só resíduo numérico)
+
+
+def test_detectar_por_trecho_sem_tendencia():
+    temp = serie_sintetica([("2013-06-10", 10)])
+    resultados = detectar_por_trecho(pd.DataFrame({"oeste": temp}), sem_tendencia=True)
+    assert "tendencia_por_decada" in resultados["oeste"]
+    assert len(eventos_em_2013_2015(resultados["oeste"]["eventos"])) == 1
