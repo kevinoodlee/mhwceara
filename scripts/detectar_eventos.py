@@ -8,6 +8,8 @@ Gera:
   - outputs/tabelas/eventos_por_trecho.csv: um evento por linha;
   - outputs/tabelas/metricas_anuais_por_trecho.csv: um ano por linha, por trecho;
   - outputs/tabelas/resumo_por_trecho.csv: resumo de cada trecho;
+  - outputs/tabelas/validacao_branqueamento.csv: dias em onda de calor nos anos com
+    branqueamento de corais documentado no Ceará e a posição desses anos na série;
   - outputs/figuras/dias_onda_calor_por_ano.png e outputs/figuras/tsm_eventos_2020.png.
 Uso:  python scripts/detectar_eventos.py
 """
@@ -16,7 +18,7 @@ import pandas as pd
 from tqdm import tqdm
 
 from mhwceara import dados, deteccao, figuras, trechos
-from mhwceara.config import PASTAS, PERIODO_BASE
+from mhwceara.config import DESTAQUE_2020, PASTAS, PERIODO_BASE, REGISTROS_BRANQUEAMENTO
 
 FONTE = (
     "Fonte: elaborado pelo autor com dados do NOAA OISST v2.1. "
@@ -55,12 +57,37 @@ for nome, r in resultados.items():
     maiores = maiores.round({"intensidade_maxima": 2, "intensidade_cumulativa": 2})
     print("    " + maiores.to_string(index=False).replace("\n", "\n    "))
 
+# validação: os anos com branqueamento documentado estão entre os de mais dias em onda de calor?
+dias = deteccao.empilhar(resultados, "anual").pivot(
+    index="ano", columns="trecho", values="dias_onda_calor"
+)[list(resultados)]
+posicao = dias.rank(ascending=False, method="min")  # 1 = ano com mais dias no trecho
+validacao = (
+    pd.DataFrame(REGISTROS_BRANQUEAMENTO)
+    .set_index("ano")
+    .join(dias.add_prefix("dias_"))
+    .join(posicao.add_prefix("posicao_").astype(int))
+)
+validacao.to_csv(PASTAS.tabelas / "validacao_branqueamento.csv")
+anos_registro = validacao.index
+print("\n== Validação: anos com branqueamento de corais documentado no Ceará")
+print(validacao.drop(columns=["registro", "fonte"]).to_string())
+print(
+    f"  média de dias em onda de calor: {dias.loc[anos_registro].mean().mean():.0f} nos anos com "
+    f"registro | {dias.drop(index=anos_registro).mean().mean():.0f} nos demais anos "
+    f"(posição 1 = ano com mais dias entre os {len(dias)})"
+)
+
 anual = {n: r["anual"] for n, r in resultados.items()}
 fig1 = figuras.dias_por_ano(
     anual, "Dias em onda de calor marinha por ano, por trecho do litoral do Ceará", FONTE
 )
 fig2 = figuras.serie_com_eventos(
-    resultados, 2020, "TSM diária em 2020 e ondas de calor marinhas detectadas", FONTE
+    resultados,
+    2020,
+    "TSM diária em 2020 e ondas de calor marinhas detectadas",
+    FONTE + " Período de branqueamento: Lucas (2022).",
+    destaque=DESTAQUE_2020,
 )
 print(f"\ngravado: {fig1}\ngravado: {fig2}")
 print(f"tabelas em {PASTAS.tabelas}")

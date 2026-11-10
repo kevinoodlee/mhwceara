@@ -98,3 +98,34 @@ class Pastas:
 
 
 PASTAS = Pastas(raiz_projeto())
+
+# Registros de branqueamento de corais no litoral do Ceará, usados para validar a detecção
+# (anos com dano ecológico documentado, independente dos dados de TSM do projeto)
+REGISTROS_BRANQUEAMENTO = (
+    {
+        "ano": 2010,
+        "registro": "branqueamento em massa de Siderastrea stellata",
+        "fonte": "SOARES et al. (2019)",
+    },
+    {
+        "ano": 2020,
+        "registro": "branqueamento de 91% das colônias de S. stellata, de fevereiro a junho",
+        "fonte": "LUCAS et al. (2023); LUCAS (2022)",
+    },
+    {
+        "ano": 2023,
+        "registro": "branqueamento em quase todo o litoral (relato de pesquisador)",
+        "fonte": "Diário do Nordeste (2025)",
+    },
+    {
+        "ano": 2024,
+        "registro": "branqueamento em quase todo o litoral (relato de pesquisador)",
+        "fonte": "Diário do Nordeste (2025)",
+    },
+)
+# Período do branqueamento de 2020 no Ceará (LUCAS, 2022), para destacar na figura de 2020
+DESTAQUE_2020 = (
+    "2020-02-01",
+    "2020-06-30",
+    "branqueamento de corais no Ceará (LUCAS et al., 2023)",
+)

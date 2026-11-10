@@ -156,6 +156,13 @@ def dias_por_ano(
         ax.bar(a.index, a["dias_onda_calor"], width=0.75, color=CORES_TRECHOS.get(trecho, "gray"))
         ax.set_title(f"Trecho {trecho}", loc="left", fontsize=10, color=COR_TEXTO)
         _estilo_painel(ax)
+    # eixo começa e termina nos anos com dado, com marcas a cada 5 anos
+    primeiro, ultimo = (
+        min(a.index.min() for a in anual.values()),
+        max(a.index.max() for a in anual.values()),
+    )
+    eixos[-1].set_xlim(primeiro - 0.6, ultimo + 0.6)
+    eixos[-1].set_xticks(range(int(np.ceil(primeiro / 5) * 5), int(ultimo) + 1, 5))
     eixos[-1].set_xlabel("Ano", color=COR_TEXTO)
     fig.supylabel("Dias em onda de calor marinha", color=COR_TEXTO, fontsize=10)
     fig.suptitle(titulo, fontsize=12, x=0.01, ha="left")
@@ -170,9 +177,14 @@ def serie_com_eventos(
     titulo: str,
     fonte: str,
     nome: str | None = None,
+    destaque: tuple[str, str, str] | None = None,
 ) -> Path:
     """TSM diária de um ano, com climatologia, limiar e os eventos detectados sombreados,
-    um painel por trecho (a figura clássica de Hobday et al., 2016)."""
+    um painel por trecho (a figura clássica de Hobday et al., 2016).
+
+    destaque: (início, fim, rótulo), com datas "AAAA-MM-DD", para marcar um período de
+    referência (por exemplo, um episódio documentado na literatura) com uma faixa cinza.
+    """
     import matplotlib.dates as mdates
     from matplotlib.lines import Line2D
     from matplotlib.ticker import FuncFormatter
@@ -199,9 +211,20 @@ def serie_com_eventos(
         ax.plot(c.index, c["temp"], color="#1f1f1f", linewidth=1.2)
         ax.plot(c.index, c["clim"], color="#8a8a8a", linewidth=1.0)
         ax.plot(c.index, c["limiar"], color="#8a8a8a", linewidth=1.0, linestyle="--")
+        if destaque:
+            ax.axvspan(
+                pd.Timestamp(destaque[0]),
+                pd.Timestamp(destaque[1]),
+                color="#d4d4d4",
+                alpha=0.5,
+                linewidth=0,
+                zorder=0,
+            )
         ax.set_title(f"Trecho {trecho}", loc="left", fontsize=10, color=COR_TEXTO)
         virgula_decimal(ax.yaxis)
         _estilo_painel(ax)
+    # só o ano pedido no eixo (sem a marca de janeiro do ano seguinte)
+    eixos[-1].set_xlim(pd.Timestamp(f"{ano}-01-01"), pd.Timestamp(f"{ano}-12-31"))
     eixos[-1].xaxis.set_major_locator(mdates.MonthLocator())
     eixos[-1].xaxis.set_major_formatter(
         FuncFormatter(lambda x, _: MESES[mdates.num2date(x).month - 1])
@@ -216,10 +239,12 @@ def serie_com_eventos(
         ),
         Patch(color="#9a9a9a", alpha=0.45, label="onda de calor marinha detectada"),
     ]
+    if destaque:
+        legenda.append(Patch(color="#d4d4d4", alpha=0.5, label=destaque[2]))
     eixos[0].legend(
         handles=legenda,
         loc="upper left",
-        ncol=4,
+        ncol=len(legenda),
         fontsize=8,
         frameon=False,
         bbox_to_anchor=(0, 1.32),
